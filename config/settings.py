@@ -25,7 +25,11 @@ SECRET_KEY = "django-insecure-s!#b%3n4qg$7+xzbfw2-ty_3tg2o=lhu**e3=$4s5eyc+mi&n$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".ngrok-free.dev",
+]
 
 
 # Application definition
@@ -37,7 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
+
     "rest_framework",
     "reviews",
 ]
