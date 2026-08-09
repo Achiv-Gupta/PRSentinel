@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import PullRequest
-
+from .github.client import GitHubClient
 
 @api_view(["POST"])
 def github_webhook(request):
@@ -40,6 +40,26 @@ def github_webhook(request):
         "commit_sha": commit_sha,
         "status": status.upper(),
     },
-)
+    )
+    client = GitHubClient()
+
+    files = client.get_pull_request(
+        repository,
+        pr_number
+    )
+
+    for file in files:
+
+        print("=" * 50)
+
+        print(file["filename"])
+
+        print(file["status"])
+
+        print(file["patch"])
+
+        print("=" * 50)
 
     return Response({"message": "Saved"})
+
+
