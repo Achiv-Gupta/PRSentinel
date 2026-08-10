@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 
+import json
 
 class ReviewIssue(BaseModel):
     issue_type: Literal[
@@ -29,3 +30,15 @@ class ReviewIssue(BaseModel):
 
 class ReviewResult(BaseModel):
     issues: list[ReviewIssue]
+
+
+def parse_llm_response(raw_output: str) -> ReviewResult:
+    cleaned = raw_output.strip()
+
+    cleaned = cleaned.replace("```json", "")
+    cleaned = cleaned.replace("```", "")
+    cleaned = cleaned.strip()
+
+    data = json.loads(cleaned)
+
+    return ReviewResult.model_validate(data)

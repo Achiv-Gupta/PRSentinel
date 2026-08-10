@@ -1,9 +1,10 @@
 import os
+import json
 
 from huggingface_hub import InferenceClient
 
 from .prompts import SYSTEM_PROMPT
-from .parser import ReviewResult
+from .parser import parse_llm_response
 
 
 class LLMClient:
@@ -62,4 +63,8 @@ Diff:
             max_tokens=1000,
         )
 
-        return response.choices[0].message.content
+        raw_output = response.choices[0].message.content
+
+        # print(repr(raw_output))
+
+        return parse_llm_response(raw_output)
