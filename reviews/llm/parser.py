@@ -22,7 +22,7 @@ class ReviewIssue(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
     file: str
-    line: int = Field(ge=1)
+    line_content: str
 
     description: str
     suggestion: str

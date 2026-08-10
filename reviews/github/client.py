@@ -14,12 +14,60 @@ class GitHubClient:
 
     def get_pull_request(self, repo, number):
 
+        url = f"{self.BASE_URL}/repos/{repo}/pulls/{number}"
+
+        response = requests.get(
+            url,
+            headers=self.headers
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+    
+    def get_pull_request_files(self, repo, number):
+
         url = f"{self.BASE_URL}/repos/{repo}/pulls/{number}/files"
 
         response = requests.get(
             url,
             headers=self.headers
         )
+
+        response.raise_for_status()
+
+        return response.json()
+    
+    def create_review_comment(
+        self,
+        repo,
+        pr_number,
+        body,
+        commit_id,
+        path,
+        line,
+    ):
+        url = (
+            f"{self.BASE_URL}/repos/"
+            f"{repo}/pulls/{pr_number}/comments"
+        )
+
+        payload = {
+            "body": body,
+            "commit_id": commit_id,
+            "path": path,
+            "line": line,
+            "side": "RIGHT",
+        }
+
+        response = requests.post(
+            url,
+            headers=self.headers,
+            json=payload,
+        )
+
+        print("STATUS:", response.status_code)
+        print("RESPONSE:", response.text)
 
         response.raise_for_status()
 

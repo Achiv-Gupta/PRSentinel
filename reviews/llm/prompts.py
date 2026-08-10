@@ -28,7 +28,7 @@ The response MUST follow this exact structure:
       "severity": "low | medium | high | critical",
       "confidence": 0.0,
       "file": "filename",
-      "line": 0,
+      "line_content": "exact changed line of code"
       "description": "Clear explanation of the problem",
       "suggestion": "Specific suggested fix"
     }
@@ -41,4 +41,6 @@ Rules:
 - Do not invent issues.
 - If there are no meaningful issues, return:
   {"issues": []}
+-line_content must be copied exactly from the changed (+) line in the supplied diff.
+Do not paraphrase it.
 """
