@@ -1,37 +1,83 @@
-from .models import PullRequest
 from .github.client import GitHubClient
+from .github.diff_parser import find_issue_location
+from .llm.client import LLMClient
 
 
-def process_pull_request(payload):
-    action = payload.get("action")
+def process_pull_request(repo, pr_number):
 
-    if action not in ["opened", "reopened", "synchronize", "closed"]:
-        return
+    github = GitHubClient()
+    llm = LLMClient()
 
-    pr = payload["pull_request"]
+    # 1. Get PR information
+    pr = github.get_pull_request(repo, pr_number)
 
-    repository = payload["repository"]["full_name"]
-    pr_number = pr["number"]
-    title = pr["title"]
-    author = pr["user"]["login"]
-    commit_sha = pr["head"]["sha"]
-    status = pr["state"]
-
-    PullRequest.objects.update_or_create(
-        repository=repository,
-        pr_number=pr_number,
-        defaults={
-            "title": title,
-            "author": author,
-            "commit_sha": commit_sha,
-            "status": status.upper(),
-        },
+    # 2. Get changed files
+    files = github.get_pull_request_files(
+        repo,
+        pr_number
     )
 
-    client = GitHubClient()
-    files = client.get_pull_request_files(repository, pr_number)
+    # 3. Run AI review
+    review_result = llm.review_code(
+        repo,
+        pr["title"],
+        files
+    )
 
-    return files
+    # 4. Filter low-confidence issues
+    issues = filter_issues(review_result)
+
+    # 5. Process each issue
+    for issue in issues:
+
+        # Find the matching file
+        file_data = next(
+            (
+                file
+                for file in files
+                if file["filename"] == issue.file
+            ),
+            None
+        )
+
+        if not file_data:
+            continue
+
+        # Find exact location in diff
+        location = find_issue_location(
+            file_data["patch"],
+            issue.line_content
+        )
+
+        if not location:
+            print(
+                f"Could not locate issue in diff: "
+                f"{issue.file}"
+            )
+            continue
+
+        # Build GitHub comment
+        body = (
+            f"**{issue.severity.upper()} {issue.issue_type.upper()}**\n\n"
+            f"{issue.description}\n\n"
+            f"**Suggestion:** {issue.suggestion}\n\n"
+            f"_Confidence: {issue.confidence:.0%}_"
+        )
+
+        # Post comment
+        github.create_review_comment(
+            repo=repo,
+            pr_number=pr_number,
+            body=body,
+            commit_id=pr["head"]["sha"],
+            path=issue.file,
+            line=location["line"],
+        )
+
+        print(
+            f"Posted review for {issue.file}:"
+            f"{location['line']}"
+        )
 
 CONFIDENCE_THRESHOLD = 0.80
 
