@@ -32,3 +32,13 @@ def process_pull_request(payload):
     files = client.get_pull_request_files(repository, pr_number)
 
     return files
+
+CONFIDENCE_THRESHOLD = 0.80
+
+
+def filter_issues(review_result):
+    return [
+        issue
+        for issue in review_result.issues
+        if issue.confidence >= CONFIDENCE_THRESHOLD
+    ]

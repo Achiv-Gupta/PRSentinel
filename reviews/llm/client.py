@@ -65,6 +65,4 @@ Diff:
 
         raw_output = response.choices[0].message.content
 
-        # print(repr(raw_output))
-
         return parse_llm_response(raw_output)
