@@ -137,3 +137,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Celery & Redis config
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+
+GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET')
