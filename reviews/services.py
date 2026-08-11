@@ -1,7 +1,7 @@
 from .github.client import GitHubClient
 from .github.diff_parser import find_issue_location
 from .llm.client import LLMClient
-
+from .models import Review
 
 def process_pull_request(repo, pr_number):
 
@@ -10,6 +10,22 @@ def process_pull_request(repo, pr_number):
 
     # 1. Get PR information
     pr = github.get_pull_request(repo, pr_number)
+
+    # 1.5 Checking for idempotency
+    commit_sha = pr['head']['sha']
+
+    review, created = Review.objects.get_or_create(
+        repository=repo,
+        pr_number=pr_number,
+        commit_sha=commit_sha,
+    )
+
+    if not created:
+        print(
+            f"PR #{pr_number} at commit "
+            f"{commit_sha[:7]} already reviewed. Skipping."
+        )
+        return
 
     # 2. Get changed files
     files = github.get_pull_request_files(

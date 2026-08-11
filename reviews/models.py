@@ -18,3 +18,35 @@ class PullRequest(models.Model):
 
     def __str__(self):
         return f"PR #{self.pr_number} - {self.title}"
+    
+
+class Review(models.Model):
+    repository = models.CharField(max_length=255)
+    pr_number = models.IntegerField()
+    commit_sha = models.CharField(max_length=40)
+
+    status = models.CharField(
+        max_length=20,
+        default="PENDING"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "repository",
+                    "pr_number",
+                    "commit_sha",
+                ],
+                name="unique_pr_commit_review",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.repository} "
+            f"#{self.pr_number} "
+            f"{self.commit_sha[:7]}"
+        )
