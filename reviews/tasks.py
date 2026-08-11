@@ -1,3 +1,5 @@
+import requests
+
 from celery import shared_task
 
 from .services import process_pull_request
@@ -5,7 +7,10 @@ from .services import process_pull_request
 
 @shared_task(
     bind=True,
-    autoretry_for=(ValueError,),
+    autoretry_for=(
+        ValueError,
+        requests.exceptions.RequestException,
+    ),
     retry_backoff=True,
     retry_kwargs={"max_retries": 3},
 )

@@ -12,7 +12,7 @@ def process_pull_request(repo, pr_number):
     pr = github.get_pull_request(repo, pr_number)
 
     # 1.5 Checking for idempotency
-    commit_sha = pr['head']['sha']
+    commit_sha = pr["head"]["sha"]
 
     review, created = Review.objects.get_or_create(
         repository=repo,
@@ -21,78 +21,91 @@ def process_pull_request(repo, pr_number):
     )
 
     if not created:
-        print(
-            f"PR #{pr_number} at commit "
-            f"{commit_sha[:7]} already reviewed. Skipping."
-        )
-        return
-
-    # 2. Get changed files
-    files = github.get_pull_request_files(
-        repo,
-        pr_number
-    )
-
-    # 3. Run AI review
-    review_result = llm.review_code(
-        repo,
-        pr["title"],
-        files
-    )
-
-    # 4. Filter low-confidence issues
-    issues = filter_issues(review_result)
-
-    # 5. Process each issue
-    for issue in issues:
-
-        # Find the matching file
-        file_data = next(
-            (
-                file
-                for file in files
-                if file["filename"] == issue.file
-            ),
-            None
-        )
-
-        if not file_data:
-            continue
-
-        # Find exact location in diff
-        location = find_issue_location(
-            file_data["patch"],
-            issue.line_content
-        )
-
-        if not location:
+        if review.status == "COMPLETED":
             print(
-                f"Could not locate issue in diff: "
-                f"{issue.file}"
+                f"PR #{pr_number} at commit "
+                f"{commit_sha[:7]} already reviewed. Skipping."
             )
-            continue
+            return
 
-        # Build GitHub comment
-        body = (
-            f"**{issue.severity.upper()} {issue.issue_type.upper()}**\n\n"
-            f"{issue.description}\n\n"
-            f"**Suggestion:** {issue.suggestion}\n\n"
-            f"_Confidence: {issue.confidence:.0%}_"
+    review.status = "PENDING"
+    review.save(update_fields=["status"])
+    
+    try:
+
+        # 2. Get changed files
+        files = github.get_pull_request_files(
+            repo,
+            pr_number
         )
 
-        # Post comment
-        github.create_review_comment(
-            repo=repo,
-            pr_number=pr_number,
-            body=body,
-            commit_id=pr["head"]["sha"],
-            path=issue.file,
-            line=location["line"],
+        # 3. Run AI review
+        review_result = llm.review_code(
+            repo,
+            pr["title"],
+            files
         )
 
-        print(
-            f"Posted review for {issue.file}:{location['line']}"
-        )
+        # 4. Filter low-confidence issues
+        issues = filter_issues(review_result)
+
+        # 5. Process each issue
+        for issue in issues:
+
+            file_data = next(
+                (
+                    file
+                    for file in files
+                    if file["filename"] == issue.file
+                ),
+                None
+            )
+
+            if not file_data:
+                continue
+
+            location = find_issue_location(
+                file_data["patch"],
+                issue.line_content
+            )
+
+            if not location:
+                print(
+                    f"Could not locate issue in diff: "
+                    f"{issue.file}"
+                )
+                continue
+
+            body = (
+                f"**{issue.severity.upper()} "
+                f"{issue.issue_type.upper()}**\n\n"
+                f"{issue.description}\n\n"
+                f"**Suggestion:** {issue.suggestion}\n\n"
+                f"_Confidence: {issue.confidence:.0%}_"
+            )
+
+            github.create_review_comment(
+                repo=repo,
+                pr_number=pr_number,
+                body=body,
+                commit_id=commit_sha,
+                path=issue.file,
+                line=location["line"],
+            )
+
+            print(
+                f"Posted review for "
+                f"{issue.file}:{location['line']}"
+            )
+
+        # Review completed successfully
+        review.status = "COMPLETED"
+        review.save(update_fields=["status"])
+
+    except Exception:
+        review.status = "FAILED"
+        review.save(update_fields=["status"])
+        raise
 
 CONFIDENCE_THRESHOLD = 0.80
 
