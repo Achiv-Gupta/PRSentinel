@@ -3,6 +3,10 @@ from .github.diff_parser import find_issue_location
 from .llm.client import LLMClient
 from .models import Review
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def process_pull_request(repo, pr_number):
 
     github = GitHubClient()
@@ -22,15 +26,16 @@ def process_pull_request(repo, pr_number):
 
     if not created:
         if review.status == "COMPLETED":
-            print(
-                f"PR #{pr_number} at commit "
-                f"{commit_sha[:7]} already reviewed. Skipping."
+            logger.info(
+                "PR #%s at commit %s already reviewed. Skipping.",
+                pr_number,
+                commit_sha[:7],
             )
             return
 
     review.status = "PENDING"
     review.save(update_fields=["status"])
-    
+
     try:
 
         # 2. Get changed files
@@ -70,9 +75,9 @@ def process_pull_request(repo, pr_number):
             )
 
             if not location:
-                print(
-                    f"Could not locate issue in diff: "
-                    f"{issue.file}"
+                logger.warning(
+                    "Could not locate issue in diff: %s",
+                    issue.file,
                 )
                 continue
 
@@ -93,9 +98,10 @@ def process_pull_request(repo, pr_number):
                 line=location["line"],
             )
 
-            print(
-                f"Posted review for "
-                f"{issue.file}:{location['line']}"
+            logger.info(
+                "Posted review for %s:%s",
+                issue.file,
+                location["line"],
             )
 
         # Review completed successfully
