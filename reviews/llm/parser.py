@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from typing import Literal
 
 import json
+import re
+
 
 class ReviewIssue(BaseModel):
     issue_type: Literal[
@@ -33,12 +35,37 @@ class ReviewResult(BaseModel):
 
 
 def parse_llm_response(raw_output: str) -> ReviewResult:
+
     cleaned = raw_output.strip()
 
-    cleaned = cleaned.replace("```json", "")
-    cleaned = cleaned.replace("```", "")
+    # Remove markdown code fences
+    cleaned = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    cleaned = re.sub(
+        r"\s*```$",
+        "",
+        cleaned,
+    )
+
     cleaned = cleaned.strip()
 
-    data = json.loads(cleaned)
+    # Parse JSON
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"LLM returned invalid JSON: {exc}"
+        ) from exc
 
-    return ReviewResult.model_validate(data)
+    # Validate schema
+    try:
+        return ReviewResult.model_validate(data)
+    except ValidationError as exc:
+        raise ValueError(
+            f"LLM returned invalid review schema: {exc}"
+        ) from exc

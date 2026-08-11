@@ -66,9 +66,6 @@ class GitHubClient:
             json=payload,
         )
 
-        print("STATUS:", response.status_code)
-        print("RESPONSE:", response.text)
-
         response.raise_for_status()
 
         return response.json()

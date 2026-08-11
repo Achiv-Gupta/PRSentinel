@@ -75,8 +75,7 @@ def process_pull_request(repo, pr_number):
         )
 
         print(
-            f"Posted review for {issue.file}:"
-            f"{location['line']}"
+            f"Posted review for {issue.file}:{location['line']}"
         )
 
 CONFIDENCE_THRESHOLD = 0.80

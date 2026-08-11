@@ -46,12 +46,23 @@ def parse_patch(patch):
 
     return results
 
+def normalize_line(line):
+    return "".join(line.split())
+
+
 def find_issue_location(patch, line_content):
 
     changed_lines = parse_patch(patch)
 
+    target = normalize_line(line_content)
+
     for changed_line in changed_lines:
-        if changed_line["content"].strip() == line_content.strip():
+
+        candidate = normalize_line(
+            changed_line["content"]
+        )
+
+        if candidate == target:
             return changed_line
 
     return None

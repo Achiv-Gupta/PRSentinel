@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import PullRequest
-from .services import process_pull_request
+from .tasks import review_pull_request
 
 
 @api_view(["POST"])
@@ -26,11 +26,11 @@ def github_webhook(request):
         },
     )
 
-    process_pull_request(
+    review_pull_request.delay(
         repository,
         pr_number,
     )
 
     return Response({
-        "message": "PR review completed"
+        "message": "PR review queued"
     })
