@@ -20,6 +20,12 @@ def github_webhook(request):
             {"error": "Missing webhook signature"},
             status=401,
         )
+    
+    if not settings.GITHUB_WEBHOOK_SECRET:
+        return Response(
+            {"error": "Webhook secret is not configured"},
+            status=500,
+        )
 
     expected_signature = (
         "sha256="
@@ -39,13 +45,34 @@ def github_webhook(request):
             status=401,
         )
 
+    event = request.headers.get("X-GitHub-Event")
+
+    if event != "pull_request":
+        return Response(
+            {"message": "Event ignored"},
+            status=200,
+        )
+
     # Signature verified — process webhook
     payload = request.data
 
-    repository = payload["repository"]["full_name"]
-    pr = payload["pull_request"]
+    action = payload.get("action")
 
-    pr_number = pr["number"]
+    if action not in {"opened", "reopened", "synchronize"}:
+        return Response(
+            {"message": "Action ignored"},
+            status=200,
+        )
+
+    try:
+        repository = payload["repository"]["full_name"]
+        pr = payload["pull_request"]
+        pr_number = pr["number"]
+    except (KeyError, TypeError):
+        return Response(
+            {"error": "Malformed webhook payload"},
+            status=400,
+        )
 
     PullRequest.objects.update_or_create(
         repository=repository,
