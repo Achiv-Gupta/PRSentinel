@@ -55,3 +55,7 @@ jobs:
       - name: Run tests
         run: |
           python manage.py test reviews
+            
+      - name: Build Docker image
+        run: |
+          docker build -t prsentinel:ci .
