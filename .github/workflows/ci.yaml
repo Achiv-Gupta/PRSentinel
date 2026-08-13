@@ -59,3 +59,21 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t prsentinel:ci .
+
+    deploy:
+      needs: test
+      runs-on: ubuntu-latest
+
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      steps:
+        - name: Deploy to OCI
+          uses: appleboy/ssh-action@v1.2.2
+          with:
+            host: ${{ secrets.DEPLOY_HOST }}
+            username: ${{ secrets.DEPLOY_USER }}
+            key: ${{ secrets.DEPLOY_SSH_KEY }}
+            script: |
+              cd ~/PRSentinel
+              git pull origin main
+              docker compose up -d --build
